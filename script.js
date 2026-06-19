@@ -532,6 +532,4 @@ function switchTab(tabId) {
 
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
-});
-localStorage.setItem('dashboard_users', JSON.stringify(users));
 }
