@@ -1,4 +1,3 @@
-// Gerenciamento de Autenticação com Netlify Identity
 class AuthManager {
     constructor() {
         this.user = null;
@@ -6,32 +5,37 @@ class AuthManager {
     }
 
     init() {
-        // Inicializar Netlify Identity
         if (window.netlifyIdentity) {
-            window.netlifyIdentity.init();
+            window.netlifyIdentity.init({
+                APIUrl: CONFIG.NETLIFY_SITE_URL + '/.netlify/identity'
+            });
 
-            // Listener para login
+            window.netlifyIdentity.on('init', (user) => {
+                if (user) {
+                    this.user = user;
+                    this.showDashboard();
+                    loadAllData();
+                }
+            });
+
             window.netlifyIdentity.on('login', (user) => {
                 this.user = user;
                 this.showDashboard();
                 loadAllData();
             });
 
-            // Listener para logout
             window.netlifyIdentity.on('logout', () => {
                 this.user = null;
                 this.showLogin();
             });
 
-            // Verificar usuário atual
-            this.user = window.netlifyIdentity.currentUser();
-            if (this.user) {
-                this.showDashboard();
-                loadAllData();
-            }
+            window.netlifyIdentity.on('error', (err) => {
+                console.error('Erro Netlify Identity:', err);
+                document.getElementById('loginError').textContent = 
+                    'Erro de autenticação: ' + (err.message || 'Tente novamente');
+            });
         }
 
-        // Configurar formulário de login
         document.getElementById('loginForm').addEventListener('submit', (e) => {
             e.preventDefault();
             this.login();
@@ -39,49 +43,59 @@ class AuthManager {
     }
 
     async login() {
-        const email = document.getElementById('email').value;
+        const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
         const errorDiv = document.getElementById('loginError');
+        const submitBtn = document.querySelector('#loginForm button');
+
+        errorDiv.textContent = '';
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Entrando...';
 
         try {
-            errorDiv.textContent = '';
+            if (window.netlifyIdentity && window.netlifyIdentity.gotrue) {
+                // Método 1: Usar a API diretamente
+                const response = await fetch(
+                    `${CONFIG.NETLIFY_SITE_URL}/.netlify/identity/token?grant_type=password`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    }
+                );
 
-            if (window.netlifyIdentity) {
-                // Usar Netlify Identity
-                await this.loginWithNetlify(email, password);
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error_description || 'E-mail ou senha inválidos');
+                }
+
+                const data = await response.json();
+
+                // Atualizar o Identity com o token
+                window.netlifyIdentity.gotrue.currentUser(data);
+                window.netlifyIdentity.emit('login', data);
+
             } else {
-                // Fallback: autenticação local simples
+                // Fallback para autenticação local
                 await this.loginLocal(email, password);
             }
         } catch (error) {
-            errorDiv.textContent = 'Erro: ' + (error.message || 'Falha na autenticação');
+            console.error('Erro no login:', error);
+
+            if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                errorDiv.textContent = 'Erro de conexão. Verifique se o site está online.';
+            } else if (error.message.includes('invalid_grant')) {
+                errorDiv.textContent = 'E-mail ou senha inválidos. Verifique suas credenciais.';
+            } else {
+                errorDiv.textContent = error.message || 'Erro ao fazer login. Tente novamente.';
+            }
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Entrar';
         }
-    }
-
-    async loginWithNetlify(email, password) {
-        // Netlify Identity usa GoTrue API
-        const response = await fetch(`${CONFIG.NETLIFY_SITE_URL}/.netlify/identity/token`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                grant_type: 'password',
-                email: email,
-                password: password
-            })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error_description || 'Credenciais inválidas');
-        }
-
-        const data = await response.json();
-        window.netlifyIdentity.currentUser(data);
-        window.netlifyIdentity.emit('login', data);
     }
 
     async loginLocal(email, password) {
-        // Autenticação local simples (para desenvolvimento)
         const users = JSON.parse(localStorage.getItem('dashboard_users') || '[]');
         const user = users.find(u => u.email === email && u.password === btoa(password));
 
@@ -96,7 +110,7 @@ class AuthManager {
     }
 
     logout() {
-        if (window.netlifyIdentity) {
+        if (window.netlifyIdentity && window.netlifyIdentity.currentUser()) {
             window.netlifyIdentity.logout();
         } else {
             localStorage.removeItem('current_user');
@@ -120,20 +134,21 @@ class AuthManager {
     }
 }
 
-// Inicializar gerenciador de autenticação
 const authManager = new AuthManager();
 
-// Funções globais
 function logout() {
     authManager.logout();
 }
 
 function showRecovery() {
     const email = prompt('Digite seu e-mail para recuperar a senha:');
-    if (email && window.netlifyIdentity) {
-        window.netlifyIdentity.gotrue.recover(email)
-            .then(() => alert('E-mail de recuperação enviado!'))
-            .catch(err => alert('Erro: ' + err.message));
+    if (email && window.netlifyIdentity && window.netlifyIdentity.gotrue) {
+        window.netlifyIdentity.gotrue
+            .recover(email)
+            .then(() => alert('E-mail de recuperação enviado! Verifique sua caixa de entrada.'))
+            .catch(err => alert('Erro ao enviar e-mail: ' + err.message));
+    } else {
+        alert('Funcionalidade disponível apenas com Netlify Identity.');
     }
 }
 
