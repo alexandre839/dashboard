@@ -532,4 +532,12 @@ function switchTab(tabId) {
 
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
+
+    const users = JSON.parse(localStorage.getItem('dashboard_users') || '[]');
+users.push({
+    email: 'alexandre@sge.com.br',
+    password: Agf@240770, // senha codificada
+    name: 'Alexandre'
+});
+localStorage.setItem('dashboard_users', JSON.stringify(users));
 }
