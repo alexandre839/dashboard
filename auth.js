@@ -144,5 +144,14 @@ window.addEventListener('load', () => {
         authManager.user = JSON.parse(savedUser);
         authManager.showDashboard();
         loadAllData();
+  
+        
+const users = JSON.parse(localStorage.getItem('dashboard_users') || '[]');
+users.push({
+    email: 'alexandre@sge.com.br',
+    password: Agf@240770, // senha codificada
+    name: 'Nome do Usuário'
+});
+localStorage.setItem('dashboard_users', JSON.stringify(users));
     }
 });
