@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SGE Dashboard - FollowUp 2026</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+    <!-- Tela de Login -->
+    <div id="loginScreen" class="login-container">
+        <div class="login-box">
+            <h1>SGE Dashboard</h1>
+            <h2>FollowUp 2026</h2>
+            <form id="loginForm">
+                <input type="email" id="email" placeholder="E-mail" required>
+                <input type="password" id="password" placeholder="Senha" required>
+                <button type="submit">Entrar</button>
+            </form>
+            <div id="loginError" class="error-message"></div>
+            <div class="login-footer">
+                <a href="#" onclick="showRecovery()">Esqueceu a senha?</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Principal -->
+    <div id="dashboardScreen" class="dashboard-container" style="display:none;">
+        <header>
+            <div class="header-content">
+                <h1>SGE Dashboard</h1>
+                <div class="header-actions">
+                    <button id="refreshBtn" class="refresh-btn" onclick="refreshData()">
+                        🔄 Atualizar
+                    </button>
+                    <button onclick="logout()" class="logout-btn">Sair</button>
+                </div>
+            </div>
+            <div class="last-update" id="lastUpdate"></div>
+        </header>
+
+        <main>
+            <!-- Seção Santander -->
+            <section class="card">
+                <h2>🏦 Santander</h2>
+                <div class="metric-grid">
+                    <div class="metric">
+                        <span class="metric-label">Saldo Conta Corrente</span>
+                        <span class="metric-value" id="santanderD">R$ 0,00</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Investimentos</span>
+                        <span class="metric-value" id="santanderE">R$ 0,00</span>
+                    </div>
+                    <div class="metric highlight">
+                        <span class="metric-label">Saldo Disponível Total</span>
+                        <span class="metric-value" id="santanderF">R$ 0,00</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seção Cielo -->
+            <section class="card">
+                <h2>💳 Cielo - Previsão de Crédito Hoje</h2>
+                <div class="metric-grid">
+                    <div class="metric">
+                        <span class="metric-label">SGPay</span>
+                        <span class="metric-value" id="cieloSgpay">R$ 0,00</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">HG Wells</span>
+                        <span class="metric-value" id="cieloHgwells">R$ 0,00</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seção SGPAY -->
+            <section class="card">
+                <h2>📊 SGPAY - Solicitações</h2>
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('sgpay-resumo')">Resumo</button>
+                    <button class="tab" onclick="switchTab('sgpay-drilldown')">Top 15</button>
+                </div>
+
+                <div id="sgpay-resumo" class="tab-content active">
+                    <div class="metric-grid">
+                        <div class="metric">
+                            <span class="metric-label">Prontas p/ Envio (5 dias)</span>
+                            <span class="metric-value" id="sgpayProntasQtde">0</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Valor Prontas (5 dias)</span>
+                            <span class="metric-value" id="sgpayProntasValor">R$ 0,00</span>
+                        </div>
+                    </div>
+                    <div class="comparison-grid">
+                        <div class="comparison-item">
+                            <h4>Concluídas</h4>
+                            <div class="month-comparison">
+                                <div>
+                                    <span class="month-label">Este mês</span>
+                                    <span class="month-value" id="sgpayConcluidasMes">R$ 0,00</span>
+                                </div>
+                                <div>
+                                    <span class="month-label">Mês passado</span>
+                                    <span class="month-value" id="sgpayConcluidasMesAnterior">R$ 0,00</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="comparison-item">
+                            <h4>Canceladas</h4>
+                            <div class="month-comparison">
+                                <div>
+                                    <span class="month-label">Este mês</span>
+                                    <span class="month-value" id="sgpayCanceladasMes">R$ 0,00</span>
+                                </div>
+                                <div>
+                                    <span class="month-label">Mês passado</span>
+                                    <span class="month-value" id="sgpayCanceladasMesAnterior">R$ 0,00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sgpay-drilldown" class="tab-content">
+                    <div class="drilldown-list" id="drilldownList"></div>
+                </div>
+            </section>
+
+            <!-- Seção Santander - Movimentações -->
+            <section class="card">
+                <h2>🏦 Santander - Movimentações</h2>
+                <div class="movements-grid">
+                    <div class="movement-section">
+                        <h3>📥 Créditos (PIX Recebidos)</h3>
+                        <div class="movement-days">
+                            <div class="day-item">
+                                <span>Hoje</span>
+                                <span id="creditosHojeQtde">0</span>
+                                <span id="creditosHojeValor">R$ 0,00</span>
+                            </div>
+                            <div class="day-item">
+                                <span>Ontem</span>
+                                <span id="creditosOntemQtde">0</span>
+                                <span id="creditosOntemValor">R$ 0,00</span>
+                            </div>
+                            <div class="day-item">
+                                <span>Anteontem</span>
+                                <span id="creditosAnteontemQtde">0</span>
+                                <span id="creditosAnteontemValor">R$ 0,00</span>
+                            </div>
+                            <div class="day-item highlight">
+                                <span>No mês</span>
+                                <span id="creditosMesQtde">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="movement-section">
+                        <h3>📤 Débitos (PIX Enviados/Acertos)</h3>
+                        <div class="movement-days">
+                            <div class="day-item">
+                                <span>Hoje</span>
+                                <span id="debitosHojeValor">R$ 0,00</span>
+                            </div>
+                            <div class="day-item">
+                                <span>Ontem</span>
+                                <span id="debitosOntemValor">R$ 0,00</span>
+                            </div>
+                            <div class="day-item">
+                                <span>Anteontem</span>
+                                <span id="debitosAnteontemValor">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="movement-section">
+                        <h3>💰 Tarifas</h3>
+                        <div class="movement-days">
+                            <div class="day-item">
+                                <span>Hoje</span>
+                                <span id="tarifasHojeValor">R$ 0,00</span>
+                            </div>
+                            <div class="day-item">
+                                <span>Ontem</span>
+                                <span id="tarifasOntemValor">R$ 0,00</span>
+                            </div>
+                            <div class="day-item">
+                                <span>Anteontem</span>
+                                <span id="tarifasAnteontemValor">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="movement-section">
+                        <h3>📄 Pagamentos (Boletos/Débito Automático)</h3>
+                        <div class="movement-days">
+                            <div class="day-item">
+                                <span>Hoje</span>
+                                <span id="pagamentosHojeValor">R$ 0,00</span>
+                            </div>
+                            <div class="day-item">
+                                <span>Ontem</span>
+                                <span id="pagamentosOntemValor">R$ 0,00</span>
+                            </div>
+                            <div class="day-item">
+                                <span>Anteontem</span>
+                                <span id="pagamentosAnteontemValor">R$ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seção Cielo SGPay -->
+            <section class="card">
+                <h2>💳 Cielo SGPay</h2>
+                <div class="cielo-grid">
+                    <div class="cielo-section">
+                        <h3>Créditos</h3>
+                        <div class="day-item">
+                            <span>Hoje</span>
+                            <span id="cieloSgpayCreditoHoje">R$ 0,00</span>
+                        </div>
+                        <div class="day-item">
+                            <span>Amanhã</span>
+                            <span id="cieloSgpayCreditoAmanha">R$ 0,00</span>
+                        </div>
+                        <div class="day-item">
+                            <span>Depois de amanhã</span>
+                            <span id="cieloSgpayCreditoDepois">R$ 0,00</span>
+                        </div>
+                    </div>
+                    <div class="cielo-section">
+                        <h3>Débitos</h3>
+                        <div class="day-item">
+                            <span>Hoje</span>
+                            <span id="cieloSgpayDebitoHoje">R$ 0,00</span>
+                        </div>
+                        <div class="day-item">
+                            <span>Amanhã</span>
+                            <span id="cieloSgpayDebitoAmanha">R$ 0,00</span>
+                        </div>
+                        <div class="day-item">
+                            <span>Depois de amanhã</span>
+                            <span id="cieloSgpayDebitoDepois">R$ 0,00</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seção Cielo HG Wells -->
+            <section class="card">
+                <h2>💳 Cielo HG Wells</h2>
+                <div class="cielo-grid">
+                    <div class="cielo-section">
+                        <h3>Créditos</h3>
+                        <div class="day-item">
+                            <span>Hoje</span>
+                            <span id="cieloHgCreditoHoje">R$ 0,00</span>
+                        </div>
+                        <div class="day-item">
+                            <span>Amanhã</span>
+                            <span id="cieloHgCreditoAmanha">R$ 0,00</span>
+                        </div>
+                        <div class="day-item">
+                            <span>Depois de amanhã</span>
+                            <span id="cieloHgCreditoDepois">R$ 0,00</span>
+                        </div>
+                    </div>
+                    <div class="cielo-section">
+                        <h3>Débitos</h3>
+                        <div class="day-item">
+                            <span>Hoje</span>
+                            <span id="cieloHgDebitoHoje">R$ 0,00</span>
+                        </div>
+                        <div class="day-item">
+                            <span>Amanhã</span>
+                            <span id="cieloHgDebitoAmanha">R$ 0,00</span>
+                        </div>
+                        <div class="day-item">
+                            <span>Depois de amanhã</span>
+                            <span id="cieloHgDebitoDepois">R$ 0,00</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Seção Chargeback -->
+            <section class="card">
+                <h2>⚠️ Chargebacks</h2>
+                <div class="chargeback-grid">
+                    <div class="chargeback-section">
+                        <h3>Geral</h3>
+                        <div class="day-item">
+                            <span>Hoje</span>
+                            <span id="cbHojeQtde">0</span>
+                            <span id="cbHojeValor">R$ 0,00</span>
+                        </div>
+                        <div class="day-item">
+                            <span>Este mês</span>
+                            <span id="cbMesQtde">0</span>
+                            <span id="cbMesValor">R$ 0,00</span>
+                        </div>
+                        <div class="day-item">
+                            <span>Mês retrasado</span>
+                            <span id="cbMesRetrasadoQtde">0</span>
+                            <span id="cbMesRetrasadoValor">R$ 0,00</span>
+                        </div>
+                    </div>
+                    <div class="chargeback-section">
+                        <h3>Por Bandeira (Este mês)</h3>
+                        <div id="cbBandeiras"></div>
+                    </div>
+                    <div class="chargeback-section">
+                        <h3>Status Autorizadora</h3>
+                        <div id="cbStatus"></div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="auth.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
